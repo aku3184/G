@@ -1,0 +1,11 @@
+# 基础框架
+streamlit>=1.32.0  # Streamlit核心库，确保支持最新功能
+
+# 数据处理
+pandas>=2.2.0      # 处理Excel表格数据
+openpyxl>=3.1.2    # 支持pandas读取xlsx格式文件
+xlrd>=2.0.1        # 支持pandas读取xls格式文件（旧版Excel）
+
+# 编码处理（生成下载链接用）
+base64>=1.0.0      # 用于文件编码生成下载链接
+    
