@@ -114,7 +114,7 @@ if uploaded_file is not None:
             chunk_df = df.iloc[i:i + max_waypoints]
             
             if output_format == 'FPL':
-                # 原FPL逻辑
+                # FPL逻辑，精确到6位
                 flight_plan = ET.Element("flight-plan", xmlns="http://www8.garmin.com/xmlschemas/FlightPlan/v1")
                 ET.SubElement(flight_plan, "created").text = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
                 waypoint_table = ET.SubElement(flight_plan, "waypoint-table")
@@ -122,8 +122,8 @@ if uploaded_file is not None:
                     waypoint = ET.SubElement(waypoint_table, "waypoint")
                     ET.SubElement(waypoint, "identifier").text = row['Description']
                     ET.SubElement(waypoint, "type").text = "USER WAYPOINT"
-                    ET.SubElement(waypoint, "lat").text = f"{row['Latitude']:.4f}"
-                    ET.SubElement(waypoint, "lon").text = f"{row['Longitude']:.4f}"
+                    ET.SubElement(waypoint, "lat").text = f"{row['Latitude']:.6f}"
+                    ET.SubElement(waypoint, "lon").text = f"{row['Longitude']:.6f}"
                     ET.SubElement(waypoint, "comment").text = row['Description']
                 route = ET.SubElement(flight_plan, "route")
                 ET.SubElement(route, "route-name").text = sheet_name
@@ -140,7 +140,7 @@ if uploaded_file is not None:
                 ext = ".fpl"
             
             elif output_format == 'KML':
-                # 生成KML
+                # KML逻辑，精确到6位
                 kml = ET.Element("kml", xmlns="http://www.opengis.net/kml/2.2")
                 document = ET.SubElement(kml, "Document")
                 ET.SubElement(document, "name").text = sheet_name
@@ -148,7 +148,7 @@ if uploaded_file is not None:
                     placemark = ET.SubElement(document, "Placemark")
                     ET.SubElement(placemark, "name").text = row['Description']
                     point = ET.SubElement(placemark, "Point")
-                    ET.SubElement(point, "coordinates").text = f"{row['Longitude']:.4f},{row['Latitude']:.4f},0"
+                    ET.SubElement(point, "coordinates").text = f"{row['Longitude']:.6f},{row['Latitude']:.6f},0"
                 rough_string = ET.tostring(kml, encoding='utf-8', method='xml')
                 reparsed = minidom.parseString(rough_string)
                 xml_string = '<?xml version="1.0" encoding="UTF-8"?>\n' + reparsed.toprettyxml(indent="  ")[23:]
@@ -157,12 +157,12 @@ if uploaded_file is not None:
                 ext = ".kml"
             
             elif output_format == 'GPX':
-                # 生成GPX (用route)
+                # GPX逻辑，精确到6位
                 gpx = ET.Element("gpx", version="1.1", creator="Streamlit Converter", xmlns="http://www.topografix.com/GPX/1/1")
                 rte = ET.SubElement(gpx, "rte")
                 ET.SubElement(rte, "name").text = sheet_name
                 for _, row in chunk_df.iterrows():
-                    rtept = ET.SubElement(rte, "rtept", lat=f"{row['Latitude']:.4f}", lon=f"{row['Longitude']:.4f}")
+                    rtept = ET.SubElement(rte, "rtept", lat=f"{row['Latitude']:.6f}", lon=f"{row['Longitude']:.6f}")
                     ET.SubElement(rtept, "name").text = row['Description']
                 rough_string = ET.tostring(gpx, encoding='utf-8', method='xml')
                 reparsed = minidom.parseString(rough_string)
@@ -172,7 +172,7 @@ if uploaded_file is not None:
                 ext = ".gpx"
             
             elif output_format == 'Excel':
-                # 生成Excel，根据coord_format格式化
+                # Excel逻辑，Decimal Degrees精确到6位
                 output_df = chunk_df.copy()
                 if coord_format == "Degrees Minutes Seconds (DMS)":
                     output_df['Latitude'] = output_df['Latitude'].apply(lambda x: dd_to_dms(x, is_lat=True))
@@ -180,7 +180,9 @@ if uploaded_file is not None:
                 elif coord_format == "Degrees Minutes (DM)":
                     output_df['Latitude'] = output_df['Latitude'].apply(lambda x: dd_to_dm(x, is_lat=True))
                     output_df['Longitude'] = output_df['Longitude'].apply(lambda x: dd_to_dm(x, is_lat=False))
-                # else: 保持Decimal
+                else:  # Decimal Degrees
+                    output_df['Latitude'] = output_df['Latitude'].round(6)
+                    output_df['Longitude'] = output_df['Longitude'].round(6)
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     output_df.to_excel(writer, index=False)
